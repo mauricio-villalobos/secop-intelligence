@@ -3,6 +3,17 @@
 The public portfolio deployment uses Streamlit Community Cloud and the
 synthetic demonstration database only.
 
+## Live application
+
+- URL: <https://secop-intelligence-co.streamlit.app>
+- Externally verified: 2026-07-23
+- Authentication required: no
+- Expected public cohort: 36 synthetic contracts
+
+The external acceptance check confirmed that the application loaded
+successfully, displayed the synthetic-data notice and exposed only the
+demonstration metrics.
+
 ## Community Cloud settings
 
 - Repository: `mauricio-villalobos/secop-intelligence`

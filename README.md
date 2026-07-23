@@ -5,6 +5,19 @@
 Privacy-minimized ingestion and decision-support tooling for Colombia's public
 procurement data.
 
+## Live portfolio
+
+- Public synthetic demo:
+  <https://secop-intelligence-co.streamlit.app>
+- Source repository:
+  <https://github.com/mauricio-villalobos/secop-intelligence>
+- Versioned release:
+  <https://github.com/mauricio-villalobos/secop-intelligence/releases/tag/v0.1.0>
+
+The public deployment contains synthetic demonstration records only. The
+full-scale figures below were validated locally against a privacy-minimized
+official SECOP II cohort and are not published with the application.
+
 This portfolio project turns official SECOP II records into a traceable human
 review queue. It does **not** detect corruption, make legal claims, or automate
 procurement decisions.

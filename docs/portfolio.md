@@ -1,5 +1,13 @@
 # Caso de portafolio: Inteligencia SECOP
 
+## Enlaces públicos
+
+- Demo desplegada: <https://secop-intelligence-co.streamlit.app>
+- Código fuente:
+  <https://github.com/mauricio-villalobos/secop-intelligence>
+- Release reproducible:
+  <https://github.com/mauricio-villalobos/secop-intelligence/releases/tag/v0.1.0>
+
 ## Problema
 
 Los datos públicos de contratación tienen volumen, cambios de estado,
@@ -18,6 +26,12 @@ revisión humana, sin afirmar fraude ni automatizar decisiones.
 
 Estas cifras pertenecen a la ejecución local aceptada. La demostración pública
 usa datos sintéticos explícitos para no publicar casos individualizados.
+
+La aplicación pública fue verificada desde una sesión externa el 23 de julio
+de 2026: cargó sin autenticación, mostró el aviso de datos sintéticos y presentó
+las 36 entidades demostrativas esperadas. Esta verificación confirma la
+disponibilidad del producto público, no sustituye la aceptación local de la
+cohorte oficial.
 
 ## Arquitectura
 
