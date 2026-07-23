@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from math import ceil
+from time import sleep
 from typing import Any
 
 import httpx
@@ -31,6 +33,32 @@ REQUIRED_FIELDS = (
 
 class ModificationValidationError(ValueError):
     """Raised when modification data violates the source contract."""
+
+
+def get_page_with_retry(
+    client: httpx.Client,
+    params: Mapping[str, Any],
+    *,
+    attempts: int = 4,
+) -> list[dict[str, Any]]:
+    retryable = {429, 500, 502, 503, 504}
+    for attempt in range(attempts):
+        response = client.get(RESOURCE_URL, params=params)
+        if response.status_code not in retryable:
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                raise ModificationValidationError("API response must be a JSON array")
+            return payload
+        if attempt + 1 < attempts:
+            retry_after = response.headers.get("Retry-After")
+            try:
+                delay = min(float(retry_after), 30.0)
+            except (TypeError, ValueError):
+                delay = 2**attempt
+            sleep(delay)
+    response.raise_for_status()
+    raise AssertionError("unreachable")
 
 
 def normalize_modification(record: Mapping[str, Any]) -> dict[str, Any]:
@@ -126,11 +154,18 @@ def orphan_contract_ids(
     }
 
 
-def build_params(contract_ids: Sequence[str], *, limit: int = 5000) -> dict[str, Any]:
+def build_params(
+    contract_ids: Sequence[str],
+    *,
+    limit: int = 1000,
+    offset: int = 0,
+) -> dict[str, Any]:
     if not contract_ids:
         raise ValueError("at least one contract ID is required")
-    if not 1 <= limit <= 5000:
-        raise ValueError("limit must be between 1 and 5000")
+    if not 1 <= limit <= 1000:
+        raise ValueError("limit must be between 1 and 1000")
+    if offset < 0:
+        raise ValueError("offset must not be negative")
     escaped_ids = [contract_id.replace("'", "''") for contract_id in contract_ids]
     quoted_ids = ",".join(f"'{contract_id}'" for contract_id in escaped_ids)
     return {
@@ -138,6 +173,7 @@ def build_params(contract_ids: Sequence[str], *, limit: int = 5000) -> dict[str,
         "$where": f"id_contrato in ({quoted_ids})",
         "$order": "id_contrato,identificador_modificacion,numero_version",
         "$limit": limit,
+        "$offset": offset,
     }
 
 
@@ -162,3 +198,63 @@ def fetch_modifications(
     if not isinstance(payload, list):
         raise ModificationValidationError("API response must be a JSON array")
     return [normalize_modification(record) for record in payload]
+
+
+def fetch_modifications_batched(
+    contract_ids: Sequence[str],
+    *,
+    batch_size: int = 150,
+    page_size: int = 1000,
+    client: httpx.Client | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, int | str]]:
+    unique_ids = sorted(set(contract_ids))
+    if not unique_ids:
+        raise ValueError("at least one contract ID is required")
+    if not 1 <= batch_size <= 200:
+        raise ValueError("batch_size must be between 1 and 200")
+    if not 1 <= page_size <= 1000:
+        raise ValueError("page_size must be between 1 and 1000")
+
+    owns_client = client is None
+    active_client = client or httpx.Client(timeout=60.0)
+    records: list[dict[str, Any]] = []
+    page_count = 0
+    completed_batches = 0
+    try:
+        for start in range(0, len(unique_ids), batch_size):
+            batch = unique_ids[start : start + batch_size]
+            offset = 0
+            while True:
+                payload = get_page_with_retry(
+                    active_client,
+                    build_params(
+                        batch,
+                        limit=page_size,
+                        offset=offset,
+                    ),
+                )
+                records.extend(normalize_modification(record) for record in payload)
+                page_count += 1
+                if len(payload) < page_size:
+                    break
+                offset += len(payload)
+            completed_batches += 1
+    finally:
+        if owns_client:
+            active_client.close()
+
+    collection_hash = content_hash(
+        {"content_hashes": sorted(str(item["_content_sha256"]) for item in records)}
+    )
+    evidence: dict[str, int | str] = {
+        "result": "PASS",
+        "input_contract_count": len(unique_ids),
+        "batch_size": batch_size,
+        "batch_count": ceil(len(unique_ids) / batch_size),
+        "completed_batches": completed_batches,
+        "page_size": page_size,
+        "page_count": page_count,
+        "source_record_count": len(records),
+        "collection_sha256": collection_hash,
+    }
+    return records, evidence

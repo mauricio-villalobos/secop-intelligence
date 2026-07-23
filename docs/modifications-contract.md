@@ -1,6 +1,6 @@
 # Modifications Source Data Contract
 
-version: 1.0
+version: 1.1
 source_dataset: `u8cx-r425`
 publisher: Agencia Nacional de Contratación Pública - Colombia Compra Eficiente
 
@@ -37,6 +37,18 @@ milestone. They are not required to establish reliable version linkage.
 
 Every modification must reference a contract in the bounded input file.
 Orphans stop the run and are reported only as a count.
+
+## Bounded batch retrieval
+
+Contract identifiers are sorted, deduplicated and divided into bounded groups
+before they enter a SoQL `IN` clause. Each group is retrieved in stable ordered
+pages until the source returns a short terminal page.
+
+The manifest records input contracts, configured and completed batches, page
+count, source row count and a deterministic collection hash. Output files are
+published by replacement only after every batch completes. This is exhaustion
+evidence for the bounded cohort, not a claim that the remote mutable dataset
+provides transactional snapshot isolation.
 
 ## Conflict quarantine
 

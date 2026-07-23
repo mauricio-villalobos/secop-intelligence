@@ -75,13 +75,16 @@ never prints the matching source text.
 Fetch modifications linked only to the bounded local contract sample:
 
 ```bash
-uv run secop-ingest-modifications
+uv run secop-ingest-modifications \
+  --batch-size 150 \
+  --page-size 1000
 ```
 
 The modification layer excludes free-text descriptions in this milestone. It
-removes only byte-equivalent logical duplicates. Conflicting representations
-of one modification/version are excluded from curated output and recorded in a
-value-free quarantine report with `REVIEW_REQUIRED`.
+retrieves the complete contract cohort in bounded ID batches and stable ordered
+pages. It removes only byte-equivalent logical duplicates. Conflicting
+representations of one modification/version are excluded from curated output
+and recorded in a value-free quarantine report with `REVIEW_REQUIRED`.
 
 Build the first deterministic attention queue using an explicit evaluation
 date:
