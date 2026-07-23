@@ -93,6 +93,13 @@ date:
 uv run secop-build-attention --as-of 2026-07-23
 ```
 
+Profile accepted rule prevalence and concentration without changing findings:
+
+```bash
+uv run secop-calibrate-rules \
+  --output data/curated/rule-calibration.json
+```
+
 Rules emit evidence-bearing data-quality or human-review findings. They do not
 produce a corruption/fraud score. See
 [`docs/attention-rules.md`](docs/attention-rules.md).

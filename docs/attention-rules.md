@@ -29,3 +29,4 @@ Every run requires an explicit `as_of` date so results are reproducible.
 - Source values are evidence, not conclusions.
 - Rule definitions and versions must be published with every result.
 - New rules require tests and a documented human action.
+- Calibration reports are descriptive only and cannot silently change a rule.

@@ -20,6 +20,7 @@ secop-ingest-modifications = "secop_intelligence.modifications_cli:main"
 secop-audit = "secop_intelligence.privacy:main"
 secop-build-attention = "secop_intelligence.attention_cli:main"
 secop-build-warehouse = "secop_intelligence.warehouse_cli:main"
+secop-calibrate-rules = "secop_intelligence.calibration_cli:main"
 
 [dependency-groups]
 dev = [
