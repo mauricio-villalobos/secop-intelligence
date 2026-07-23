@@ -16,6 +16,7 @@ dependencies = [
 secop-ingest = "secop_intelligence.cli:main"
 secop-ingest-modifications = "secop_intelligence.modifications_cli:main"
 secop-audit = "secop_intelligence.privacy:main"
+secop-build-attention = "secop_intelligence.attention_cli:main"
 
 [dependency-groups]
 dev = [

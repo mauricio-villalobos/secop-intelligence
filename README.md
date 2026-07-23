@@ -80,6 +80,17 @@ removes only byte-equivalent logical duplicates. Conflicting representations
 of one modification/version are excluded from curated output and recorded in a
 value-free quarantine report with `REVIEW_REQUIRED`.
 
+Build the first deterministic attention queue using an explicit evaluation
+date:
+
+```bash
+uv run secop-build-attention --as-of 2026-07-23
+```
+
+Rules emit evidence-bearing data-quality or human-review findings. They do not
+produce a corruption/fraud score. See
+[`docs/attention-rules.md`](docs/attention-rules.md).
+
 ## Privacy boundary
 
 The project intentionally excludes:
