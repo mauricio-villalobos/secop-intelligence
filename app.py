@@ -6,6 +6,9 @@ import streamlit as st
 
 from secop_intelligence.analytics import (
     ALL,
+    CATEGORY_LABELS,
+    LANE_LABELS,
+    RULE_LABELS,
     AnalyticsDatabaseError,
     contract_detail,
     filter_options,
@@ -26,21 +29,21 @@ DATABASE, DEMO_MODE = resolve_database()
 DISPLAYED_LIMIT = 200
 
 st.set_page_config(
-    page_title="SECOP Intelligence",
+    page_title="Inteligencia SECOP",
     page_icon="🔎",
     layout="wide",
 )
 
-st.title("SECOP Intelligence")
+st.title("Inteligencia SECOP")
 st.caption(
-    "Deterministic decision support over privacy-minimized public data. "
-    "Findings require human review and are not allegations."
+    "Apoyo determinista para decisiones sobre datos públicos minimizados. "
+    "Los hallazgos requieren revisión humana y no constituyen acusaciones."
 )
 if DEMO_MODE:
     st.info(
-        "Public demonstration mode: all entities, contracts and evidence shown "
-        "here are synthetic. Full-scale acceptance was executed locally over "
-        "privacy-minimized official SECOP II data."
+        "Modo de demostración pública: todas las entidades, contratos y "
+        "evidencias son sintéticos. La validación a escala completa se ejecutó "
+        "localmente sobre datos oficiales de SECOP II minimizados."
     )
 
 try:
@@ -52,47 +55,59 @@ except AnalyticsDatabaseError as error:
     st.stop()
 
 columns = st.columns(5)
-columns[0].metric("Contracts", metrics["contract_count"])
-columns[1].metric("Findings", metrics["finding_count"])
-columns[2].metric("Contracts flagged", metrics["contracts_with_findings"])
-columns[3].metric("Human review", metrics["human_review_count"])
-columns[4].metric("Data quality", metrics["data_quality_count"])
+columns[0].metric("Contratos", metrics["contract_count"])
+columns[1].metric("Hallazgos", metrics["finding_count"])
+columns[2].metric("Contratos marcados", metrics["contracts_with_findings"])
+columns[3].metric("Revisión humana", metrics["human_review_count"])
+columns[4].metric("Calidad de datos", metrics["data_quality_count"])
 
 summary_tab, queue_tab, methodology_tab = st.tabs(
-    ["Rule summary", "Review queue", "Methodology"]
+    ["Resumen de reglas", "Cola de revisión", "Metodología"]
 )
 
 with summary_tab:
-    st.subheader("Operational attention lanes")
+    st.subheader("Carriles operativos de atención")
     lanes = present_lane_counts(lane_counts(DATABASE))
     st.dataframe(
         lanes,
         width="stretch",
         hide_index=True,
         column_config={
-            "Contracts": st.column_config.NumberColumn(format="%d"),
-            "Findings": st.column_config.NumberColumn(format="%d"),
+            "Contratos": st.column_config.NumberColumn(format="%d"),
+            "Hallazgos": st.column_config.NumberColumn(format="%d"),
         },
     )
 
-    st.subheader("Transparent rule counts")
+    st.subheader("Conteos transparentes por regla")
     counts = present_rule_counts(rule_counts(DATABASE))
     st.dataframe(
         counts,
         width="stretch",
         hide_index=True,
         column_config={
-            "Findings": st.column_config.NumberColumn(format="%d"),
+            "Hallazgos": st.column_config.NumberColumn(format="%d"),
         },
     )
 
 with queue_tab:
     filter_columns = st.columns(4)
-    lane_id = filter_columns[0].selectbox("Attention lane", options["lanes"])
-    category = filter_columns[1].selectbox("Category", options["categories"])
-    rule_id = filter_columns[2].selectbox("Rule", options["rules"])
+    lane_id = filter_columns[0].selectbox(
+        "Carril de atención",
+        options["lanes"],
+        format_func=lambda value: LANE_LABELS.get(value, value),
+    )
+    category = filter_columns[1].selectbox(
+        "Categoría",
+        options["categories"],
+        format_func=lambda value: CATEGORY_LABELS.get(value, value),
+    )
+    rule_id = filter_columns[2].selectbox(
+        "Regla",
+        options["rules"],
+        format_func=lambda value: RULE_LABELS.get(value, value),
+    )
     contract_state = filter_columns[3].selectbox(
-        "Contract state",
+        "Estado del contrato",
         options["states"],
     )
     queue = present_queue(
@@ -105,7 +120,7 @@ with queue_tab:
             limit=DISPLAYED_LIMIT,
         )
     )
-    st.caption(f"{len(queue)} evidence-bearing findings")
+    st.caption(f"{len(queue)} hallazgos con evidencia")
     export_payload = build_review_artifact(
         queue,
         filters={
@@ -118,7 +133,7 @@ with queue_tab:
         displayed_limit=DISPLAYED_LIMIT,
     )
     st.download_button(
-        "Download displayed review package",
+        "Descargar paquete de revisión visible",
         data=export_payload,
         file_name="secop-review-package.zip",
         mime="application/zip",
@@ -131,83 +146,91 @@ with queue_tab:
         on_select="rerun",
         selection_mode="single-row",
         column_config={
-            "Value (COP)": st.column_config.NumberColumn(format="localized"),
-            "Evidence": st.column_config.TextColumn(width="large"),
+            "Valor (COP)": st.column_config.NumberColumn(format="localized"),
+            "Evidencia": st.column_config.TextColumn(width="large"),
         },
     )
     selected_rows = selection.selection.rows
     if selected_rows:
         selected = queue[selected_rows[0]]
-        detail = contract_detail(DATABASE, selected["Contract ID"])
+        detail = contract_detail(DATABASE, selected["ID del contrato"])
         if detail is None:
-            st.error("The selected contract is no longer in the accepted database.")
+            st.error(
+                "El contrato seleccionado ya no está en la base de datos aceptada."
+            )
         else:
             contract = detail["contract"]
             modifications = detail["modifications"]
             st.divider()
-            st.subheader(f"Contract case · {contract['contract_id']}")
+            st.subheader(f"Caso contractual · {contract['contract_id']}")
             st.caption(
-                "Traceable context for human review. Source values are not "
-                "legal conclusions."
+                "Contexto trazable para revisión humana. Los valores de la "
+                "fuente no son conclusiones legales."
             )
 
             detail_columns = st.columns(4)
-            detail_columns[0].metric("State", contract["contract_state"] or "—")
+            detail_columns[0].metric(
+                "Estado",
+                contract["contract_state"] or "—",
+            )
             detail_columns[1].metric(
-                "Contract value (COP)",
+                "Valor contractual (COP)",
                 contract["contract_value"] or 0,
             )
             detail_columns[2].metric(
-                "Modification records",
+                "Registros de modificación",
                 modifications["modification_count"],
             )
             detail_columns[3].metric(
-                "Extension records",
+                "Registros de prórroga",
                 modifications["extension_record_count"],
             )
 
-            st.write(f"**Entity:** {contract['entity_name'] or '—'}")
+            st.write(f"**Entidad:** {contract['entity_name'] or '—'}")
             st.write(
-                f"**Location:** {contract['city'] or '—'}, "
+                f"**Ubicación:** {contract['city'] or '—'}, "
                 f"{contract['department'] or '—'}"
             )
             st.write(
-                f"**Period:** {contract['starts_at'] or '—'} → "
+                f"**Período:** {contract['starts_at'] or '—'} → "
                 f"{contract['ends_at'] or '—'}"
             )
 
             process_url = trusted_process_url(contract["process_url"])
             if process_url:
-                st.link_button("Open official SECOP process", process_url)
+                st.link_button("Abrir proceso oficial en SECOP", process_url)
             elif contract["process_url"]:
                 st.warning(
-                    "A source URL exists but its host is not on the official "
-                    "SECOP allowlist."
+                    "Existe una URL de origen, pero su host no pertenece a la "
+                    "lista oficial permitida de SECOP."
                 )
 
-            st.markdown("#### Evidence-bearing findings")
+            st.markdown("#### Hallazgos con evidencia")
             st.dataframe(
                 present_detail_findings(detail["findings"]),
                 width="stretch",
                 hide_index=True,
                 column_config={
-                    "Evidence": st.column_config.TextColumn(width="large"),
+                    "Evidencia": st.column_config.TextColumn(width="large"),
                 },
             )
 
 with methodology_tab:
     st.markdown(
         """
-        - Source records are requested from official SECOP II datasets.
-        - Personal identifiers and banking fields are excluded by allowlist.
-        - Conflicting modification versions are quarantined.
-        - Every finding identifies its deterministic rule and evidence.
-        - Attention lanes organize findings without suppressing them.
-        - Lanes are deterministic labels, not scores or conclusions.
-        - The interface opens DuckDB in read-only mode.
-        - No composite risk score, fraud classification or automatic decision
-          is produced.
+        - Los registros provienen de conjuntos oficiales de SECOP II.
+        - Los identificadores personales y campos bancarios se excluyen
+          mediante una lista permitida.
+        - Las versiones conflictivas de modificaciones se ponen en cuarentena.
+        - Cada hallazgo conserva su regla determinista y evidencia.
+        - Los carriles organizan los hallazgos sin suprimirlos.
+        - Los carriles son etiquetas deterministas, no puntajes o conclusiones.
+        - La interfaz abre DuckDB en modo de solo lectura.
+        - No se produce un puntaje compuesto de riesgo, clasificación de fraude
+          ni decisión automática.
         """
     )
 
-st.caption(f"Ruleset 1.0 · Database: {DATABASE} · Filters default to {ALL}")
+st.caption(
+    f"Reglas 1.0 · Base de datos: {DATABASE} · Valor predeterminado de filtros: {ALL}"
+)

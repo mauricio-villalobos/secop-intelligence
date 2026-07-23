@@ -10,16 +10,16 @@ from datetime import datetime
 from typing import Any
 
 EXPORT_FIELDS = (
-    "Contract ID",
-    "Entity",
-    "State",
-    "Value (COP)",
-    "Category",
-    "Attention lane",
-    "Rule",
-    "Rule ID",
-    "Ruleset",
-    "Evidence",
+    "ID del contrato",
+    "Entidad",
+    "Estado",
+    "Valor (COP)",
+    "Categoría",
+    "Carril de atención",
+    "Regla",
+    "ID de regla",
+    "Versión de reglas",
+    "Evidencia",
 )
 
 
@@ -64,20 +64,20 @@ def build_review_artifact(
         "filters": dict(sorted(filters.items())),
         "ruleset_versions": sorted(
             {
-                str(record["Ruleset"])
+                str(record["Versión de reglas"])
                 for record in records
-                if record.get("Ruleset") not in (None, "")
+                if record.get("Versión de reglas") not in (None, "")
             }
         ),
         "findings_csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
         "completeness_notice": (
-            "This artifact contains the currently displayed, bounded queue. "
-            "It is not a complete export when exported_row_count equals "
-            "displayed_limit."
+            "Este artefacto contiene la cola acotada que se muestra actualmente. "
+            "No es una exportación completa cuando exported_row_count es igual "
+            "a displayed_limit."
         ),
         "guardrail": (
-            "Findings support human review and are not allegations, legal "
-            "conclusions, risk scores, or automated decisions."
+            "Los hallazgos apoyan la revisión humana; no son acusaciones, "
+            "conclusiones legales, puntajes de riesgo ni decisiones automáticas."
         ),
     }
     manifest_payload = (

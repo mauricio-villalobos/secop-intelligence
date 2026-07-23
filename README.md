@@ -1,5 +1,7 @@
 # SECOP Intelligence
 
+[Caso de portafolio en español](docs/portfolio.md)
+
 Privacy-minimized ingestion and decision-support tooling for Colombia's public
 procurement data.
 

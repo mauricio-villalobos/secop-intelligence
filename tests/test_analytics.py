@@ -87,9 +87,9 @@ def test_filter_options_and_parameterized_queue(tmp_path: Path) -> None:
         contract_state="En ejecución",
     )
 
-    assert options["categories"] == ["All", "data_quality", "human_review"]
+    assert options["categories"] == ["Todos", "data_quality", "human_review"]
     assert options["lanes"] == [
-        "All",
+        "Todos",
         "DATA_QUALITY_BLOCKER",
         "EXTENSION_FOLLOW_UP",
     ]
@@ -212,9 +212,10 @@ def test_presentation_hides_internal_hash_and_labels_rules() -> None:
     )
 
     assert "finding_id" not in queue[0]
-    assert queue[0]["Rule"] == "Extension recorded"
-    assert queue[0]["Attention lane"] == "Extension follow-up"
-    assert queue[0]["Ruleset"] == "1.0"
-    assert counts[0]["Category"] == "Human review"
-    assert lanes[0]["Attention lane"] == "Extension follow-up"
-    assert detail_findings[0]["Ruleset"] == "1.0"
+    assert queue[0]["Regla"] == "Prórroga registrada"
+    assert queue[0]["Carril de atención"] == "Seguimiento de prórroga"
+    assert queue[0]["Versión de reglas"] == "1.0"
+    assert counts[0]["Categoría"] == "Revisión humana"
+    assert lanes[0]["Carril de atención"] == "Seguimiento de prórroga"
+    assert lanes[0]["Contratos"] == 1
+    assert detail_findings[0]["Versión de reglas"] == "1.0"

@@ -7,29 +7,29 @@ from urllib.parse import urlparse
 
 import duckdb
 
-ALL = "All"
+ALL = "Todos"
 
 RULE_LABELS = {
-    "DQ_END_BEFORE_START": "Contract end date before start date",
-    "DQ_PAID_EXCEEDS_CONTRACT_VALUE": "Paid value exceeds contract value",
-    "DQ_MODIFICATION_VERSION_CONFLICT": "Conflicting modification version",
-    "REVIEW_ACTIVE_AFTER_END_DATE": "Active after contract end date",
-    "REVIEW_ENDING_WITHIN_30_DAYS": "Ending within 30 days",
-    "REVIEW_EXTENSION_RECORDED": "Extension recorded",
+    "DQ_END_BEFORE_START": "Fecha de fin anterior a la fecha de inicio",
+    "DQ_PAID_EXCEEDS_CONTRACT_VALUE": "Valor pagado supera el valor contractual",
+    "DQ_MODIFICATION_VERSION_CONFLICT": "Versiones de modificación conflictivas",
+    "REVIEW_ACTIVE_AFTER_END_DATE": "Activo después de la fecha de finalización",
+    "REVIEW_ENDING_WITHIN_30_DAYS": "Finaliza en los próximos 30 días",
+    "REVIEW_EXTENSION_RECORDED": "Prórroga registrada",
 }
 
 CATEGORY_LABELS = {
-    "data_quality": "Data quality",
-    "human_review": "Human review",
+    "data_quality": "Calidad de datos",
+    "human_review": "Revisión humana",
 }
 
 LANE_LABELS = {
-    "DATA_QUALITY_BLOCKER": "Data quality blocker",
-    "EXTENSION_FOLLOW_UP": "Extension follow-up",
-    "CLOSURE_REVIEW": "Recent closure review",
-    "STALE_STATUS_REVIEW": "Stale status review",
-    "UPCOMING_CLOSURE": "Upcoming closure",
-    "GENERAL_REVIEW": "General review",
+    "DATA_QUALITY_BLOCKER": "Bloqueo por calidad de datos",
+    "EXTENSION_FOLLOW_UP": "Seguimiento de prórroga",
+    "CLOSURE_REVIEW": "Revisión de cierre reciente",
+    "STALE_STATUS_REVIEW": "Revisión de estado desactualizado",
+    "UPCOMING_CLOSURE": "Cierre próximo",
+    "GENERAL_REVIEW": "Revisión general",
 }
 
 LANE_CTE = """
@@ -340,18 +340,18 @@ def present_detail_findings(
 ) -> list[dict[str, Any]]:
     return [
         {
-            "Attention lane": LANE_LABELS.get(
+            "Carril de atención": LANE_LABELS.get(
                 str(item["lane_id"]),
                 str(item["lane_id"]),
             ),
-            "Category": CATEGORY_LABELS.get(
+            "Categoría": CATEGORY_LABELS.get(
                 str(item["category"]),
                 str(item["category"]),
             ),
-            "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
-            "Rule ID": str(item["rule_id"]),
-            "Ruleset": str(item["ruleset_version"]),
-            "Evidence": item["evidence"],
+            "Regla": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
+            "ID de regla": str(item["rule_id"]),
+            "Versión de reglas": str(item["ruleset_version"]),
+            "Evidencia": item["evidence"],
         }
         for item in records
     ]
@@ -360,13 +360,13 @@ def present_detail_findings(
 def present_lane_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
-            "Attention lane": LANE_LABELS.get(
+            "Carril de atención": LANE_LABELS.get(
                 str(item["lane_id"]),
                 str(item["lane_id"]),
             ),
-            "Lane ID": str(item["lane_id"]),
-            "Contracts": int(item["contract_count"]),
-            "Findings": int(item["finding_count"]),
+            "ID del carril": str(item["lane_id"]),
+            "Contratos": int(item["contract_count"]),
+            "Hallazgos": int(item["finding_count"]),
         }
         for item in records
     ]
@@ -375,13 +375,13 @@ def present_lane_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def present_rule_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
-            "Category": CATEGORY_LABELS.get(
+            "Categoría": CATEGORY_LABELS.get(
                 str(item["category"]),
                 str(item["category"]),
             ),
-            "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
-            "Rule ID": str(item["rule_id"]),
-            "Findings": int(item["finding_count"]),
+            "Regla": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
+            "ID de regla": str(item["rule_id"]),
+            "Hallazgos": int(item["finding_count"]),
         }
         for item in records
     ]
@@ -390,22 +390,22 @@ def present_rule_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def present_queue(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
-            "Contract ID": str(item["contract_id"]),
-            "Entity": item["entity_name"],
-            "State": item["contract_state"],
-            "Value (COP)": item["contract_value"],
-            "Category": CATEGORY_LABELS.get(
+            "ID del contrato": str(item["contract_id"]),
+            "Entidad": item["entity_name"],
+            "Estado": item["contract_state"],
+            "Valor (COP)": item["contract_value"],
+            "Categoría": CATEGORY_LABELS.get(
                 str(item["category"]),
                 str(item["category"]),
             ),
-            "Attention lane": LANE_LABELS.get(
+            "Carril de atención": LANE_LABELS.get(
                 str(item["lane_id"]),
                 str(item["lane_id"]),
             ),
-            "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
-            "Rule ID": str(item["rule_id"]),
-            "Ruleset": str(item["ruleset_version"]),
-            "Evidence": item["evidence"],
+            "Regla": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
+            "ID de regla": str(item["rule_id"]),
+            "Versión de reglas": str(item["ruleset_version"]),
+            "Evidencia": item["evidence"],
         }
         for item in records
     ]
