@@ -11,6 +11,7 @@ from secop_intelligence.contracts import (
     ContractValidationError,
     duplicate_contract_ids,
     fetch_complete_contracts,
+    normalize_process_url,
     normalize_record,
 )
 
@@ -78,6 +79,32 @@ def test_normalize_adds_stable_content_hash() -> None:
 
     assert first["_content_sha256"] == second["_content_sha256"]
     assert len(str(first["_content_sha256"])) == 64
+    assert first["urlproceso"] == "https://example.invalid/contract/1"
+
+
+def test_url_normalization_accepts_socrata_object_and_string() -> None:
+    assert normalize_process_url({"url": " https://example.invalid/a "}) == (
+        "https://example.invalid/a"
+    )
+    assert (
+        normalize_process_url(
+            {
+                "url": "https://example.invalid/a",
+                "description": "Public process",
+            }
+        )
+        == "https://example.invalid/a"
+    )
+    assert normalize_process_url(" https://example.invalid/a ") == (
+        "https://example.invalid/a"
+    )
+
+
+def test_url_normalization_rejects_malformed_objects() -> None:
+    with pytest.raises(ContractValidationError, match="non-empty"):
+        normalize_process_url({"url": ""})
+    with pytest.raises(ContractValidationError, match="unexpected"):
+        normalize_process_url({"url": "https://example.invalid", "unsafe": "x"})
 
 
 def test_duplicate_contract_ids() -> None:

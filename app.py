@@ -7,14 +7,17 @@ import streamlit as st
 from secop_intelligence.analytics import (
     ALL,
     AnalyticsDatabaseError,
+    contract_detail,
     filter_options,
     lane_counts,
     overview,
+    present_detail_findings,
     present_lane_counts,
     present_queue,
     present_rule_counts,
     review_queue,
     rule_counts,
+    trusted_process_url,
 )
 
 DATABASE = Path("data/warehouse/secop.duckdb")
@@ -93,15 +96,77 @@ with queue_tab:
         )
     )
     st.caption(f"{len(queue)} evidence-bearing findings")
-    st.dataframe(
+    selection = st.dataframe(
         queue,
         width="stretch",
         hide_index=True,
+        key="review_queue_table",
+        on_select="rerun",
+        selection_mode="single-row",
         column_config={
             "Value (COP)": st.column_config.NumberColumn(format="localized"),
             "Evidence": st.column_config.TextColumn(width="large"),
         },
     )
+    selected_rows = selection.selection.rows
+    if selected_rows:
+        selected = queue[selected_rows[0]]
+        detail = contract_detail(DATABASE, selected["Contract ID"])
+        if detail is None:
+            st.error("The selected contract is no longer in the accepted database.")
+        else:
+            contract = detail["contract"]
+            modifications = detail["modifications"]
+            st.divider()
+            st.subheader(f"Contract case · {contract['contract_id']}")
+            st.caption(
+                "Traceable context for human review. Source values are not "
+                "legal conclusions."
+            )
+
+            detail_columns = st.columns(4)
+            detail_columns[0].metric("State", contract["contract_state"] or "—")
+            detail_columns[1].metric(
+                "Contract value (COP)",
+                contract["contract_value"] or 0,
+            )
+            detail_columns[2].metric(
+                "Modification records",
+                modifications["modification_count"],
+            )
+            detail_columns[3].metric(
+                "Extension records",
+                modifications["extension_record_count"],
+            )
+
+            st.write(f"**Entity:** {contract['entity_name'] or '—'}")
+            st.write(
+                f"**Location:** {contract['city'] or '—'}, "
+                f"{contract['department'] or '—'}"
+            )
+            st.write(
+                f"**Period:** {contract['starts_at'] or '—'} → "
+                f"{contract['ends_at'] or '—'}"
+            )
+
+            process_url = trusted_process_url(contract["process_url"])
+            if process_url:
+                st.link_button("Open official SECOP process", process_url)
+            elif contract["process_url"]:
+                st.warning(
+                    "A source URL exists but its host is not on the official "
+                    "SECOP allowlist."
+                )
+
+            st.markdown("#### Evidence-bearing findings")
+            st.dataframe(
+                present_detail_findings(detail["findings"]),
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Evidence": st.column_config.TextColumn(width="large"),
+                },
+            )
 
 with methodology_tab:
     st.markdown(

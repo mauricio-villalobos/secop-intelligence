@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import duckdb
 
@@ -242,6 +244,117 @@ def review_queue(
             """,
             parameters,
         )
+
+
+def contract_detail(database: Path, contract_id: str) -> dict[str, Any] | None:
+    with _connect(database) as connection:
+        contract_rows = _rows(
+            connection,
+            """
+            SELECT
+                contract_id,
+                entity_name,
+                department,
+                city,
+                sector,
+                contract_state,
+                signed_at,
+                starts_at,
+                ends_at,
+                contract_value,
+                invoiced_value,
+                paid_value,
+                days_added,
+                source_updated_at,
+                process_url
+            FROM contracts
+            WHERE contract_id = ?
+            """,
+            [contract_id],
+        )
+        if not contract_rows:
+            return None
+
+        findings = _rows(
+            connection,
+            f"""
+            {LANE_CTE}
+            SELECT
+                category,
+                lane_id,
+                rule_id,
+                ruleset_version,
+                CAST(evidence_json AS VARCHAR) AS evidence
+            FROM laned_findings
+            WHERE contract_id = ?
+            ORDER BY lane_id, rule_id, finding_id
+            """,
+            [contract_id],
+        )
+        modification_row = connection.execute(
+            """
+            SELECT
+                COUNT(*) AS modification_count,
+                COUNT(*) FILTER (
+                    WHERE COALESCE(days_extended, 0) > 0
+                ) AS extension_record_count,
+                MAX(days_extended) AS maximum_days_extended,
+                MAX(
+                    COALESCE(version_at, approved_at, loaded_at)
+                ) AS latest_modification_at
+            FROM modifications
+            WHERE contract_id = ?
+            """,
+            [contract_id],
+        ).fetchone()
+
+    if modification_row is None:
+        raise AnalyticsDatabaseError("modification summary returned no row")
+    return {
+        "contract": contract_rows[0],
+        "findings": findings,
+        "modifications": {
+            "modification_count": int(modification_row[0]),
+            "extension_record_count": int(modification_row[1]),
+            "maximum_days_extended": modification_row[2],
+            "latest_modification_at": modification_row[3],
+        },
+    }
+
+
+def trusted_process_url(value: Any) -> str | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    legacy = re.fullmatch(r"\{'url': '([^']+)'\}", text)
+    if legacy:
+        text = legacy.group(1)
+    parsed = urlparse(text)
+    if parsed.scheme != "https" or parsed.hostname != "community.secop.gov.co":
+        return None
+    return text
+
+
+def present_detail_findings(
+    records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "Attention lane": LANE_LABELS.get(
+                str(item["lane_id"]),
+                str(item["lane_id"]),
+            ),
+            "Category": CATEGORY_LABELS.get(
+                str(item["category"]),
+                str(item["category"]),
+            ),
+            "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
+            "Rule ID": str(item["rule_id"]),
+            "Ruleset": str(item["ruleset_version"]),
+            "Evidence": item["evidence"],
+        }
+        for item in records
+    ]
 
 
 def present_lane_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -133,18 +133,33 @@ def normalize_record(record: Mapping[str, Any]) -> dict[str, Any]:
         fields = ", ".join(sorted(unexpected))
         raise ContractValidationError(f"unexpected fields received: {fields}")
 
-    missing = [
-        field
-        for field in REQUIRED_FIELDS
-        if field not in record or record[field] in (None, "")
-    ]
+    normalized = {field: record.get(field) for field in CONTRACT_FIELDS}
+    normalized["urlproceso"] = normalize_process_url(record.get("urlproceso"))
+
+    missing = [field for field in REQUIRED_FIELDS if normalized[field] in (None, "")]
     if missing:
         fields = ", ".join(missing)
         raise ContractValidationError(f"required fields missing: {fields}")
 
-    normalized = {field: record.get(field) for field in CONTRACT_FIELDS}
     normalized["_content_sha256"] = content_hash(normalized)
     return normalized
+
+
+def normalize_process_url(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if not isinstance(value, Mapping):
+        raise ContractValidationError("urlproceso must be a URL object or string")
+
+    unexpected = set(value) - {"url", "description"}
+    if unexpected:
+        raise ContractValidationError("urlproceso contains unexpected properties")
+    url = value.get("url")
+    if not isinstance(url, str) or not url.strip():
+        raise ContractValidationError("urlproceso.url must be a non-empty string")
+    return url.strip()
 
 
 def content_hash(record: Mapping[str, Any]) -> str:

@@ -17,6 +17,10 @@ The application:
 - binds only to localhost and disables Streamlit usage telemetry;
 - hides internal finding hashes from the decision-support table while retaining
   technical rule identifiers for traceability.
+- supports single-row case selection with consolidated contract context,
+  modification counts and all evidence-bearing findings;
+- links only to HTTPS URLs on the exact official
+  `community.secop.gov.co` host.
 
 The interface is a decision-support surface, not a fraud detector or an
 automated procurement decision system.
