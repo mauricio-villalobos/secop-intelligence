@@ -9,18 +9,21 @@ This portfolio project turns official SECOP II records into a traceable human
 review queue. It does **not** detect corruption, make legal claims, or automate
 procurement decisions.
 
-## Current milestone
+## Version 0.1.0
 
-Milestone 1 establishes the governed data boundary:
+The first public portfolio release provides:
 
-- an explicit allowlist of non-sensitive contract fields;
-- bounded queries to the official Socrata API;
-- deterministic record validation and content hashing;
-- JSON Lines output plus an ingestion manifest;
-- tests that prevent accidental collection of prohibited personal fields.
+- complete, bounded and privacy-minimized SECOP II ingestion;
+- deterministic contract and modification validation;
+- explicit quarantine of conflicting modification versions;
+- versioned, evidence-bearing attention rules;
+- a typed DuckDB analytical warehouse;
+- a read-only Spanish Streamlit interface;
+- traceable review-package exports; and
+- a deterministic synthetic mode for safe public demonstration.
 
-Dashboarding and AI-assisted explanations remain gated on data-quality
-acceptance.
+See the [changelog](CHANGELOG.md) and
+[release notes](docs/releases/v0.1.0.md).
 
 ## Source
 
