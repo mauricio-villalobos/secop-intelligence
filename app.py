@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 import streamlit as st
 
@@ -20,9 +19,10 @@ from secop_intelligence.analytics import (
     rule_counts,
     trusted_process_url,
 )
+from secop_intelligence.demo import resolve_database
 from secop_intelligence.review_export import build_review_artifact
 
-DATABASE = Path("data/warehouse/secop.duckdb")
+DATABASE, DEMO_MODE = resolve_database()
 DISPLAYED_LIMIT = 200
 
 st.set_page_config(
@@ -36,6 +36,12 @@ st.caption(
     "Deterministic decision support over privacy-minimized public data. "
     "Findings require human review and are not allegations."
 )
+if DEMO_MODE:
+    st.info(
+        "Public demonstration mode: all entities, contracts and evidence shown "
+        "here are synthetic. Full-scale acceptance was executed locally over "
+        "privacy-minimized official SECOP II data."
+    )
 
 try:
     metrics = overview(DATABASE)

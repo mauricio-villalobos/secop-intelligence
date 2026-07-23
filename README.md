@@ -130,6 +130,21 @@ uv run streamlit run app.py
 The interface exposes transparent metrics, rule counts and an evidence-bearing
 review queue. See [`docs/interface.md`](docs/interface.md).
 
+## Public demonstration mode
+
+When the accepted local warehouse is unavailable, the application creates a
+small deterministic synthetic database. Demonstration entities use explicit
+`Entidad demostrativa` names, process URLs are absent, and the interface
+displays a prominent synthetic-data notice.
+
+This mode exists only to make the public portfolio reproducible. The
+full-scale acceptance figures documented in this repository come from the
+privacy-minimized official SECOP II cohort; the public demo does not represent
+real procurement cases.
+
+Set `SECOP_DEMO_MODE=1` to test the public mode locally, or
+`SECOP_DATABASE_PATH` to use an explicitly selected accepted database.
+
 ## Privacy boundary
 
 The project intentionally excludes:

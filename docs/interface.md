@@ -29,6 +29,14 @@ The application:
 The interface is a decision-support surface, not a fraud detector or an
 automated procurement decision system.
 
+## Public demonstration
+
+If no accepted warehouse exists, the application creates a deterministic
+synthetic database under `.cache/`. Synthetic entity names are explicit, no
+official process URLs are included, and a visible notice distinguishes the
+demo from full-scale acceptance evidence. `SECOP_DATABASE_PATH` can select an
+accepted database explicitly; `SECOP_DEMO_MODE=1` forces the synthetic mode.
+
 ## Attention lanes
 
 Lanes are deterministic presentation labels:
