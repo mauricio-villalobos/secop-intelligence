@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import uuid
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -152,11 +153,14 @@ def ensure_demo_database(database: Path = DEMO_DATABASE) -> Path:
     if database.is_file():
         return database
     database.parent.mkdir(parents=True, exist_ok=True)
-    temporary = database.with_suffix(".tmp.duckdb")
-    if temporary.exists():
-        temporary.unlink()
-    build_demo_database(temporary)
-    os.replace(temporary, database)
+    temporary = database.with_name(
+        f".{database.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+    )
+    try:
+        build_demo_database(temporary)
+        os.replace(temporary, database)
+    finally:
+        temporary.unlink(missing_ok=True)
     return database
 
 

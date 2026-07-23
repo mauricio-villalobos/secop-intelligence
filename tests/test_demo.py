@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import duckdb
@@ -77,6 +78,28 @@ def test_ensure_demo_database_is_idempotent(tmp_path: Path) -> None:
 
     assert second == first
     assert second.stat().st_mtime_ns == first_mtime
+
+
+def test_demo_database_initialization_is_concurrency_safe(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "demo.duckdb"
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        databases = list(
+            executor.map(
+                ensure_demo_database,
+                [database, database, database, database],
+            )
+        )
+
+    assert databases == [database] * 4
+    with duckdb.connect(str(database), read_only=True) as connection:
+        contract_count = connection.execute(
+            "SELECT COUNT(*) FROM contracts"
+        ).fetchone()[0]
+    assert contract_count == DEMO_CONTRACT_COUNT
+    assert list(tmp_path.glob("*.tmp")) == []
 
 
 def test_demo_mode_can_be_explicit(monkeypatch, tmp_path: Path) -> None:
