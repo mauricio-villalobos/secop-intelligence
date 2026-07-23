@@ -7,7 +7,9 @@ import pytest
 from secop_intelligence.analytics import (
     AnalyticsDatabaseError,
     filter_options,
+    lane_counts,
     overview,
+    present_lane_counts,
     present_queue,
     present_rule_counts,
     review_queue,
@@ -80,8 +82,35 @@ def test_filter_options_and_parameterized_queue(tmp_path: Path) -> None:
     )
 
     assert options["categories"] == ["All", "data_quality", "human_review"]
+    assert options["lanes"] == [
+        "All",
+        "DATA_QUALITY_BLOCKER",
+        "EXTENSION_FOLLOW_UP",
+    ]
     assert len(queue) == 1
     assert queue[0]["rule_id"] == "REVIEW_EXTENSION_RECORDED"
+    assert queue[0]["lane_id"] == "EXTENSION_FOLLOW_UP"
+
+    extension_queue = review_queue(database, lane_id="EXTENSION_FOLLOW_UP")
+    assert len(extension_queue) == 1
+
+
+def test_lane_counts_use_unique_contracts(tmp_path: Path) -> None:
+    database = tmp_path / "secop.duckdb"
+    build_sample(database)
+
+    assert lane_counts(database) == [
+        {
+            "lane_id": "DATA_QUALITY_BLOCKER",
+            "finding_count": 1,
+            "contract_count": 1,
+        },
+        {
+            "lane_id": "EXTENSION_FOLLOW_UP",
+            "finding_count": 1,
+            "contract_count": 1,
+        },
+    ]
 
 
 def test_queue_rejects_invalid_limit(tmp_path: Path) -> None:
@@ -108,6 +137,7 @@ def test_presentation_hides_internal_hash_and_labels_rules() -> None:
                 "contract_value": 1000,
                 "category": "human_review",
                 "rule_id": "REVIEW_EXTENSION_RECORDED",
+                "lane_id": "EXTENSION_FOLLOW_UP",
                 "ruleset_version": "1.0",
                 "evidence": '{"days":3}',
             }
@@ -122,7 +152,18 @@ def test_presentation_hides_internal_hash_and_labels_rules() -> None:
             }
         ]
     )
+    lanes = present_lane_counts(
+        [
+            {
+                "lane_id": "EXTENSION_FOLLOW_UP",
+                "contract_count": 1,
+                "finding_count": 1,
+            }
+        ]
+    )
 
     assert "finding_id" not in queue[0]
     assert queue[0]["Rule"] == "Extension recorded"
+    assert queue[0]["Attention lane"] == "Extension follow-up"
     assert counts[0]["Category"] == "Human review"
+    assert lanes[0]["Attention lane"] == "Extension follow-up"

@@ -100,6 +100,10 @@ uv run secop-calibrate-rules \
   --output data/curated/rule-calibration.json
 ```
 
+The read-only interface groups existing findings into transparent operational
+lanes for data quality, extension follow-up, recent closure, stale status and
+upcoming closure. Lanes never replace rule IDs or evidence and are not scores.
+
 Rules emit evidence-bearing data-quality or human-review findings. They do not
 produce a corruption/fraud score. See
 [`docs/attention-rules.md`](docs/attention-rules.md).

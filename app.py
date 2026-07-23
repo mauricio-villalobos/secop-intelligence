@@ -8,7 +8,9 @@ from secop_intelligence.analytics import (
     ALL,
     AnalyticsDatabaseError,
     filter_options,
+    lane_counts,
     overview,
+    present_lane_counts,
     present_queue,
     present_rule_counts,
     review_queue,
@@ -49,6 +51,18 @@ summary_tab, queue_tab, methodology_tab = st.tabs(
 )
 
 with summary_tab:
+    st.subheader("Operational attention lanes")
+    lanes = present_lane_counts(lane_counts(DATABASE))
+    st.dataframe(
+        lanes,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Contracts": st.column_config.NumberColumn(format="%d"),
+            "Findings": st.column_config.NumberColumn(format="%d"),
+        },
+    )
+
     st.subheader("Transparent rule counts")
     counts = present_rule_counts(rule_counts(DATABASE))
     st.dataframe(
@@ -61,10 +75,11 @@ with summary_tab:
     )
 
 with queue_tab:
-    filter_columns = st.columns(3)
-    category = filter_columns[0].selectbox("Category", options["categories"])
-    rule_id = filter_columns[1].selectbox("Rule", options["rules"])
-    contract_state = filter_columns[2].selectbox(
+    filter_columns = st.columns(4)
+    lane_id = filter_columns[0].selectbox("Attention lane", options["lanes"])
+    category = filter_columns[1].selectbox("Category", options["categories"])
+    rule_id = filter_columns[2].selectbox("Rule", options["rules"])
+    contract_state = filter_columns[3].selectbox(
         "Contract state",
         options["states"],
     )
@@ -74,6 +89,7 @@ with queue_tab:
             category=category,
             rule_id=rule_id,
             contract_state=contract_state,
+            lane_id=lane_id,
         )
     )
     st.caption(f"{len(queue)} evidence-bearing findings")
@@ -94,6 +110,8 @@ with methodology_tab:
         - Personal identifiers and banking fields are excluded by allowlist.
         - Conflicting modification versions are quarantined.
         - Every finding identifies its deterministic rule and evidence.
+        - Attention lanes organize findings without suppressing them.
+        - Lanes are deterministic labels, not scores or conclusions.
         - The interface opens DuckDB in read-only mode.
         - No composite risk score, fraud classification or automatic decision
           is produced.

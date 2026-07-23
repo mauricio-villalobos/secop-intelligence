@@ -8,6 +8,8 @@ import duckdb
 ALL = "All"
 
 RULE_LABELS = {
+    "DQ_END_BEFORE_START": "Contract end date before start date",
+    "DQ_PAID_EXCEEDS_CONTRACT_VALUE": "Paid value exceeds contract value",
     "DQ_MODIFICATION_VERSION_CONFLICT": "Conflicting modification version",
     "REVIEW_ACTIVE_AFTER_END_DATE": "Active after contract end date",
     "REVIEW_ENDING_WITHIN_30_DAYS": "Ending within 30 days",
@@ -18,6 +20,59 @@ CATEGORY_LABELS = {
     "data_quality": "Data quality",
     "human_review": "Human review",
 }
+
+LANE_LABELS = {
+    "DATA_QUALITY_BLOCKER": "Data quality blocker",
+    "EXTENSION_FOLLOW_UP": "Extension follow-up",
+    "CLOSURE_REVIEW": "Recent closure review",
+    "STALE_STATUS_REVIEW": "Stale status review",
+    "UPCOMING_CLOSURE": "Upcoming closure",
+    "GENERAL_REVIEW": "General review",
+}
+
+LANE_CTE = """
+WITH extension_contracts AS (
+    SELECT DISTINCT contract_id
+    FROM attention_findings
+    WHERE rule_id = 'REVIEW_EXTENSION_RECORDED'
+),
+laned_findings AS (
+    SELECT
+        f.*,
+        CASE
+            WHEN f.category = 'data_quality'
+                THEN 'DATA_QUALITY_BLOCKER'
+            WHEN f.rule_id = 'REVIEW_EXTENSION_RECORDED'
+                THEN 'EXTENSION_FOLLOW_UP'
+            WHEN
+                f.rule_id = 'REVIEW_ACTIVE_AFTER_END_DATE'
+                AND extension.contract_id IS NOT NULL
+                THEN 'EXTENSION_FOLLOW_UP'
+            WHEN
+                f.rule_id = 'REVIEW_ACTIVE_AFTER_END_DATE'
+                AND c.ends_at IS NOT NULL
+                AND TRY_CAST(
+                    json_extract_string(f.evidence_json, '$.as_of') AS DATE
+                ) IS NOT NULL
+                AND date_diff(
+                    'day',
+                    CAST(c.ends_at AS DATE),
+                    TRY_CAST(
+                        json_extract_string(f.evidence_json, '$.as_of') AS DATE
+                    )
+                ) <= 30
+                THEN 'CLOSURE_REVIEW'
+            WHEN f.rule_id = 'REVIEW_ACTIVE_AFTER_END_DATE'
+                THEN 'STALE_STATUS_REVIEW'
+            WHEN f.rule_id = 'REVIEW_ENDING_WITHIN_30_DAYS'
+                THEN 'UPCOMING_CLOSURE'
+            ELSE 'GENERAL_REVIEW'
+        END AS lane_id
+    FROM attention_findings AS f
+    JOIN contracts AS c USING (contract_id)
+    LEFT JOIN extension_contracts AS extension USING (contract_id)
+)
+"""
 
 
 class AnalyticsDatabaseError(ValueError):
@@ -87,10 +142,18 @@ def filter_options(database: Path) -> dict[str, list[str]]:
                 "WHERE contract_state IS NOT NULL ORDER BY contract_state"
             ).fetchall()
         ]
+        lanes = [
+            str(row[0])
+            for row in connection.execute(
+                f"{LANE_CTE} SELECT DISTINCT lane_id "
+                "FROM laned_findings ORDER BY lane_id"
+            ).fetchall()
+        ]
     return {
         "categories": [ALL, *categories],
         "rules": [ALL, *rules],
         "states": [ALL, *states],
+        "lanes": [ALL, *lanes],
     }
 
 
@@ -106,12 +169,30 @@ def rule_counts(database: Path) -> list[dict[str, Any]]:
         )
 
 
+def lane_counts(database: Path) -> list[dict[str, Any]]:
+    with _connect(database) as connection:
+        return _rows(
+            connection,
+            f"""
+            {LANE_CTE}
+            SELECT
+                lane_id,
+                COUNT(*) AS finding_count,
+                COUNT(DISTINCT contract_id) AS contract_count
+            FROM laned_findings
+            GROUP BY lane_id
+            ORDER BY contract_count DESC, lane_id
+            """,
+        )
+
+
 def review_queue(
     database: Path,
     *,
     category: str = ALL,
     rule_id: str = ALL,
     contract_state: str = ALL,
+    lane_id: str = ALL,
     limit: int = 200,
 ) -> list[dict[str, Any]]:
     if not 1 <= limit <= 1000:
@@ -123,6 +204,7 @@ def review_queue(
         ("f.category", category),
         ("f.rule_id", rule_id),
         ("c.contract_state", contract_state),
+        ("f.lane_id", lane_id),
     ):
         if value != ALL:
             clauses.append(f"{column} = ?")
@@ -134,6 +216,7 @@ def review_queue(
         return _rows(
             connection,
             f"""
+            {LANE_CTE}
             SELECT
                 f.finding_id,
                 f.contract_id,
@@ -143,13 +226,15 @@ def review_queue(
                 c.contract_value,
                 f.category,
                 f.rule_id,
+                f.lane_id,
                 f.ruleset_version,
                 CAST(f.evidence_json AS VARCHAR) AS evidence
-            FROM attention_findings AS f
+            FROM laned_findings AS f
             JOIN contracts AS c USING (contract_id)
             {where}
             ORDER BY
                 CASE f.category WHEN 'data_quality' THEN 0 ELSE 1 END,
+                f.lane_id,
                 f.rule_id,
                 f.contract_id,
                 f.finding_id
@@ -157,6 +242,21 @@ def review_queue(
             """,
             parameters,
         )
+
+
+def present_lane_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "Attention lane": LANE_LABELS.get(
+                str(item["lane_id"]),
+                str(item["lane_id"]),
+            ),
+            "Lane ID": str(item["lane_id"]),
+            "Contracts": int(item["contract_count"]),
+            "Findings": int(item["finding_count"]),
+        }
+        for item in records
+    ]
 
 
 def present_rule_counts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -184,6 +284,10 @@ def present_queue(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "Category": CATEGORY_LABELS.get(
                 str(item["category"]),
                 str(item["category"]),
+            ),
+            "Attention lane": LANE_LABELS.get(
+                str(item["lane_id"]),
+                str(item["lane_id"]),
             ),
             "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
             "Rule ID": str(item["rule_id"]),
