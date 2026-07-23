@@ -149,6 +149,8 @@ real procurement cases.
 
 Set `SECOP_DEMO_MODE=1` to test the public mode locally, or
 `SECOP_DATABASE_PATH` to use an explicitly selected accepted database.
+See [`docs/deployment.md`](docs/deployment.md) for the public deployment
+settings and acceptance boundary.
 
 ## Privacy boundary
 

@@ -14,7 +14,8 @@ The application:
 - derives transparent operational lanes without changing source findings;
 - preserves the rule version and evidence for human review;
 - does not fetch source data or write analytical records.
-- binds only to localhost and disables Streamlit usage telemetry;
+- lets the runtime select its network interface and disables Streamlit usage
+  telemetry;
 - hides internal finding hashes from the decision-support table while retaining
   technical rule identifiers for traceability.
 - supports single-row case selection with consolidated contract context,
