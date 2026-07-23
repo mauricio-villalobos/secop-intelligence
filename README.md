@@ -91,6 +91,15 @@ Rules emit evidence-bearing data-quality or human-review findings. They do not
 produce a corruption/fraud score. See
 [`docs/attention-rules.md`](docs/attention-rules.md).
 
+Materialize the accepted artifacts as typed local analytical tables:
+
+```bash
+uv run secop-build-warehouse
+```
+
+The command creates `data/warehouse/secop.duckdb` transactionally and rejects
+orphan references. See [`docs/warehouse.md`](docs/warehouse.md).
+
 ## Privacy boundary
 
 The project intentionally excludes:

@@ -9,6 +9,7 @@ authors = [
     { name = "Mauricio Villalobos" },
 ]
 dependencies = [
+    "duckdb==1.5.4",
     "httpx>=0.28.1,<0.29",
 ]
 
@@ -17,6 +18,7 @@ secop-ingest = "secop_intelligence.cli:main"
 secop-ingest-modifications = "secop_intelligence.modifications_cli:main"
 secop-audit = "secop_intelligence.privacy:main"
 secop-build-attention = "secop_intelligence.attention_cli:main"
+secop-build-warehouse = "secop_intelligence.warehouse_cli:main"
 
 [dependency-groups]
 dev = [
