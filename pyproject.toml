@@ -11,6 +11,7 @@ authors = [
 dependencies = [
     "duckdb==1.5.4",
     "httpx>=0.28.1,<0.29",
+    "streamlit==1.59.2",
 ]
 
 [project.scripts]

@@ -100,6 +100,15 @@ uv run secop-build-warehouse
 The command creates `data/warehouse/secop.duckdb` transactionally and rejects
 orphan references. See [`docs/warehouse.md`](docs/warehouse.md).
 
+Launch the read-only analytical interface:
+
+```bash
+uv run streamlit run app.py
+```
+
+The interface exposes transparent metrics, rule counts and an evidence-bearing
+review queue. See [`docs/interface.md`](docs/interface.md).
+
 ## Privacy boundary
 
 The project intentionally excludes:
