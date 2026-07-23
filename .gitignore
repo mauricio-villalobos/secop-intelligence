@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[oc]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Generated data and evidence
+data/
+artifacts/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# AI artifacts
+models/
+*.gguf
+*.safetensors
+*.ckpt
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

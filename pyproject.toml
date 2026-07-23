@@ -1,0 +1,38 @@
+[project]
+name = "secop-intelligence"
+version = "0.1.0"
+description = "Privacy-minimized ingestion and decision support for SECOP II public procurement data."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [
+    { name = "Mauricio Villalobos" },
+]
+dependencies = [
+    "httpx>=0.28.1,<0.29",
+]
+
+[project.scripts]
+secop-ingest = "secop_intelligence.cli:main"
+secop-audit = "secop_intelligence.privacy:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2,<9",
+    "ruff==0.15.14",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
