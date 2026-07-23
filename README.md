@@ -38,17 +38,18 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-## Bounded ingestion
+## Complete bounded ingestion
 
-The command below requests at most 100 contracts. Generated data is excluded
-from Git:
+The command below retrieves the complete six-month departmental slice while
+enforcing a 60,000-record safety ceiling. Generated data is excluded from Git:
 
 ```bash
 uv run secop-ingest \
   --department "Valle del Cauca" \
   --signed-from 2026-01-01 \
   --signed-before 2026-07-01 \
-  --limit 100
+  --max-records 60000 \
+  --page-size 1000
 ```
 
 Output:
@@ -58,7 +59,9 @@ data/raw/contracts.jsonl
 data/raw/manifest.json
 ```
 
-Only fields declared in `CONTRACT_FIELDS` are requested and persisted.
+Only fields declared in `CONTRACT_FIELDS` are requested and persisted. The
+manifest proves count stability, completeness, uniqueness and a deterministic
+collection hash.
 
 Audit free text before using or publishing any generated sample:
 

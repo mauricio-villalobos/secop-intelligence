@@ -67,33 +67,59 @@ class ContractValidationError(ValueError):
     """Raised when a source record violates the ingestion contract."""
 
 
+class ContractCompletenessError(RuntimeError):
+    """Raised when a bounded source snapshot cannot be proven complete."""
+
+
 @dataclass(frozen=True)
 class ContractQuery:
     department: str
     signed_from: date
     signed_before: date
     limit: int = 100
+    page_size: int = 1000
 
     def __post_init__(self) -> None:
         if self.signed_from >= self.signed_before:
             raise ValueError("signed_from must be earlier than signed_before")
-        if not 1 <= self.limit <= 1000:
-            raise ValueError("limit must be between 1 and 1000")
+        if not 1 <= self.limit <= 100_000:
+            raise ValueError("limit must be between 1 and 100000")
+        if not 1 <= self.page_size <= 1000:
+            raise ValueError("page_size must be between 1 and 1000")
         if not self.department.strip():
             raise ValueError("department must not be empty")
 
-    def params(self) -> dict[str, str | int]:
+    def where_clause(self) -> str:
         department = self.department.replace("'", "''")
-        where = (
+        return (
             f"departamento='{department}' "
             f"AND fecha_de_firma >= '{self.signed_from.isoformat()}T00:00:00' "
             f"AND fecha_de_firma < '{self.signed_before.isoformat()}T00:00:00'"
         )
+
+    def params(
+        self,
+        *,
+        offset: int = 0,
+        page_limit: int | None = None,
+    ) -> dict[str, str | int]:
+        if offset < 0:
+            raise ValueError("offset must not be negative")
+        effective_limit = page_limit or min(self.limit, self.page_size)
+        if not 1 <= effective_limit <= self.page_size:
+            raise ValueError("page_limit exceeds configured page_size")
         return {
             "$select": ",".join(CONTRACT_FIELDS),
-            "$where": where,
+            "$where": self.where_clause(),
             "$order": "fecha_de_firma,id_contrato",
-            "$limit": self.limit,
+            "$limit": effective_limit,
+            "$offset": offset,
+        }
+
+    def count_params(self) -> dict[str, str]:
+        return {
+            "$select": "count(*) AS record_count",
+            "$where": self.where_clause(),
         }
 
 
@@ -149,6 +175,101 @@ def fetch_contracts(
     if not isinstance(payload, list):
         raise ContractValidationError("API response must be a JSON array")
     return [normalize_record(record) for record in payload]
+
+
+def fetch_contract_count(
+    query: ContractQuery,
+    *,
+    client: httpx.Client | None = None,
+) -> int:
+    owns_client = client is None
+    active_client = client or httpx.Client(timeout=30.0)
+    try:
+        response = active_client.get(RESOURCE_URL, params=query.count_params())
+        response.raise_for_status()
+        payload = response.json()
+    finally:
+        if owns_client:
+            active_client.close()
+
+    if (
+        not isinstance(payload, list)
+        or len(payload) != 1
+        or not isinstance(payload[0], Mapping)
+    ):
+        raise ContractValidationError("count response must contain one object")
+    try:
+        count = int(payload[0]["record_count"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ContractValidationError("invalid count response") from error
+    if count < 0:
+        raise ContractValidationError("record count must not be negative")
+    return count
+
+
+def fetch_complete_contracts(
+    query: ContractQuery,
+    *,
+    client: httpx.Client | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, int | str]]:
+    owns_client = client is None
+    active_client = client or httpx.Client(timeout=30.0)
+    try:
+        expected_before = fetch_contract_count(query, client=active_client)
+        if expected_before > query.limit:
+            raise ContractCompletenessError(
+                f"source count {expected_before} exceeds max records {query.limit}"
+            )
+
+        records: list[dict[str, Any]] = []
+        pages = 0
+        while len(records) < expected_before:
+            page_limit = min(query.page_size, expected_before - len(records))
+            response = active_client.get(
+                RESOURCE_URL,
+                params=query.params(
+                    offset=len(records),
+                    page_limit=page_limit,
+                ),
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                raise ContractValidationError("API response must be a JSON array")
+            if not payload:
+                raise ContractCompletenessError(
+                    "source returned an empty page before expected count"
+                )
+            records.extend(normalize_record(record) for record in payload)
+            pages += 1
+
+        expected_after = fetch_contract_count(query, client=active_client)
+    finally:
+        if owns_client:
+            active_client.close()
+
+    duplicates = duplicate_contract_ids(records)
+    if duplicates:
+        raise ContractCompletenessError("duplicate contract IDs received")
+    if expected_before != expected_after:
+        raise ContractCompletenessError("source count changed during pagination")
+    if len(records) != expected_before:
+        raise ContractCompletenessError("received count differs from source count")
+
+    collection_hash = hashlib.sha256(
+        "".join(sorted(str(item["_content_sha256"]) for item in records)).encode()
+    ).hexdigest()
+    evidence: dict[str, int | str] = {
+        "result": "PASS",
+        "expected_count_before": expected_before,
+        "expected_count_after": expected_after,
+        "record_count": len(records),
+        "unique_contract_ids": len(records),
+        "page_count": pages,
+        "page_size": query.page_size,
+        "collection_sha256": collection_hash,
+    }
+    return records, evidence
 
 
 def duplicate_contract_ids(records: Iterable[Mapping[str, Any]]) -> set[str]:

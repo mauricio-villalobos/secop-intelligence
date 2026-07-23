@@ -1,6 +1,6 @@
 # Contracts Source Data Contract
 
-version: 1.0
+version: 1.1
 source_dataset: `jbjy-vk9h`
 publisher: Agencia Nacional de Contratación Pública - Colombia Compra Eficiente
 
@@ -70,6 +70,21 @@ The planned production-shaped strategy is:
 3. upsert by `id_contrato`;
 4. compare the canonical content hash;
 5. retain run manifests and ingestion timestamps.
+
+## Complete bounded snapshots
+
+The ingestion obtains the official filtered row count before downloading,
+requests stable ordered pages, and repeats the count afterward. Local
+publication uses replacement files and is allowed only when:
+
+- both source counts match;
+- received rows equal the source count;
+- contract identifiers are unique;
+- the source count does not exceed the explicit safety limit.
+
+The manifest records page count, page size, both source counts, unique key
+count and a deterministic collection hash. A changing source or incomplete
+page fails closed without publishing a new snapshot.
 
 ## Source change policy
 

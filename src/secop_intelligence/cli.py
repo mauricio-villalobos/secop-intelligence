@@ -8,8 +8,7 @@ from pathlib import Path
 from secop_intelligence.contracts import (
     DATASET_ID,
     ContractQuery,
-    duplicate_contract_ids,
-    fetch_contracts,
+    fetch_complete_contracts,
 )
 
 
@@ -22,12 +21,19 @@ def parse_date(value: str) -> date:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fetch a privacy-minimized, bounded SECOP II contract sample."
+        description="Fetch a complete, privacy-minimized SECOP II contract slice."
     )
     parser.add_argument("--department", required=True)
     parser.add_argument("--signed-from", required=True, type=parse_date)
     parser.add_argument("--signed-before", required=True, type=parse_date)
-    parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument(
+        "--max-records",
+        "--limit",
+        dest="max_records",
+        type=int,
+        default=60_000,
+    )
+    parser.add_argument("--page-size", type=int, default=1000)
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -42,39 +48,42 @@ def main() -> int:
         department=args.department,
         signed_from=args.signed_from,
         signed_before=args.signed_before,
-        limit=args.limit,
+        limit=args.max_records,
+        page_size=args.page_size,
     )
-    records = fetch_contracts(query)
-    duplicates = duplicate_contract_ids(records)
-    if duplicates:
-        duplicate_list = ", ".join(sorted(duplicates))
-        raise RuntimeError(f"duplicate contract IDs received: {duplicate_list}")
+    records, completeness = fetch_complete_contracts(query)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     records_path = args.output_dir / "contracts.jsonl"
-    with records_path.open("w", encoding="utf-8", newline="\n") as output:
+    pending_records_path = records_path.with_suffix(".jsonl.pending")
+    with pending_records_path.open("w", encoding="utf-8", newline="\n") as output:
         for record in records:
             output.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
             output.write("\n")
+    pending_records_path.replace(records_path)
 
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "captured_at": datetime.now(UTC).isoformat(),
         "dataset_id": DATASET_ID,
         "query": {
             "department": query.department,
             "signed_from": query.signed_from.isoformat(),
             "signed_before": query.signed_before.isoformat(),
-            "limit": query.limit,
+            "max_records": query.limit,
+            "page_size": query.page_size,
         },
-        "record_count": len(records),
+        "completeness": completeness,
+        "record_count": completeness["record_count"],
         "duplicates": 0,
         "records_file": records_path.name,
     }
     manifest_path = args.output_dir / "manifest.json"
-    manifest_path.write_text(
+    pending_manifest_path = manifest_path.with_suffix(".json.pending")
+    pending_manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    pending_manifest_path.replace(manifest_path)
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
     return 0
