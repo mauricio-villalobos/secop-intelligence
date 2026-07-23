@@ -21,6 +21,10 @@ The application:
   modification counts and all evidence-bearing findings;
 - links only to HTTPS URLs on the exact official
   `community.secop.gov.co` host.
+- exports the currently displayed bounded queue as a ZIP containing a UTF-8
+  CSV and a manifest with filters, UTC timestamp, rulesets, row limit and
+  SHA-256 integrity evidence;
+- neutralizes spreadsheet-formula prefixes in exported text cells.
 
 The interface is a decision-support surface, not a fraud detector or an
 automated procurement decision system.
@@ -38,3 +42,9 @@ Lanes are deterministic presentation labels:
 
 They are not severity scores, legal conclusions or automated decisions. The
 original rule ID, ruleset version and evidence remain available.
+
+## Review package
+
+The download is deliberately named a displayed review package. It does not
+claim completeness when the displayed row count reaches the explicit limit.
+The manifest records that limit and warns that findings require human review.

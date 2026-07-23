@@ -105,6 +105,8 @@ lanes for data quality, extension follow-up, recent closure, stale status and
 upcoming closure. Lanes never replace rule IDs or evidence and are not scores.
 Selecting one queue row opens consolidated case context and, when the stored
 URL passes the official-host allowlist, a link to the SECOP process.
+The visible filtered queue can also be downloaded as a bounded ZIP review
+package containing `findings.csv` plus a traceability manifest.
 
 Rules emit evidence-bearing data-quality or human-review findings. They do not
 produce a corruption/fraud score. See

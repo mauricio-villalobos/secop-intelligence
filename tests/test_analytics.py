@@ -214,6 +214,7 @@ def test_presentation_hides_internal_hash_and_labels_rules() -> None:
     assert "finding_id" not in queue[0]
     assert queue[0]["Rule"] == "Extension recorded"
     assert queue[0]["Attention lane"] == "Extension follow-up"
+    assert queue[0]["Ruleset"] == "1.0"
     assert counts[0]["Category"] == "Human review"
     assert lanes[0]["Attention lane"] == "Extension follow-up"
     assert detail_findings[0]["Ruleset"] == "1.0"

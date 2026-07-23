@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import streamlit as st
@@ -19,8 +20,10 @@ from secop_intelligence.analytics import (
     rule_counts,
     trusted_process_url,
 )
+from secop_intelligence.review_export import build_review_artifact
 
 DATABASE = Path("data/warehouse/secop.duckdb")
+DISPLAYED_LIMIT = 200
 
 st.set_page_config(
     page_title="SECOP Intelligence",
@@ -93,9 +96,27 @@ with queue_tab:
             rule_id=rule_id,
             contract_state=contract_state,
             lane_id=lane_id,
+            limit=DISPLAYED_LIMIT,
         )
     )
     st.caption(f"{len(queue)} evidence-bearing findings")
+    export_payload = build_review_artifact(
+        queue,
+        filters={
+            "attention_lane": lane_id,
+            "category": category,
+            "contract_state": contract_state,
+            "rule_id": rule_id,
+        },
+        generated_at=datetime.now(UTC),
+        displayed_limit=DISPLAYED_LIMIT,
+    )
+    st.download_button(
+        "Download displayed review package",
+        data=export_payload,
+        file_name="secop-review-package.zip",
+        mime="application/zip",
+    )
     selection = st.dataframe(
         queue,
         width="stretch",

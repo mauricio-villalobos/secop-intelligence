@@ -404,6 +404,7 @@ def present_queue(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             ),
             "Rule": RULE_LABELS.get(str(item["rule_id"]), str(item["rule_id"])),
             "Rule ID": str(item["rule_id"]),
+            "Ruleset": str(item["ruleset_version"]),
             "Evidence": item["evidence"],
         }
         for item in records
