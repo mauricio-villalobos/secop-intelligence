@@ -69,6 +69,17 @@ uv run secop-audit
 The audit reports only content hashes, field names and pattern categories. It
 never prints the matching source text.
 
+Fetch modifications linked only to the bounded local contract sample:
+
+```bash
+uv run secop-ingest-modifications
+```
+
+The modification layer excludes free-text descriptions in this milestone. It
+removes only byte-equivalent logical duplicates. Conflicting representations
+of one modification/version are excluded from curated output and recorded in a
+value-free quarantine report with `REVIEW_REQUIRED`.
+
 ## Privacy boundary
 
 The project intentionally excludes:

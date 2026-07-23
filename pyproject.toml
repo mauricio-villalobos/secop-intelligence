@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 secop-ingest = "secop_intelligence.cli:main"
+secop-ingest-modifications = "secop_intelligence.modifications_cli:main"
 secop-audit = "secop_intelligence.privacy:main"
 
 [dependency-groups]
